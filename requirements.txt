@@ -1,8 +1,9 @@
-streamlit
-openai
 langchain
-faiss-cpu
-pdfminer.six
+langchain-community
+langchain-openai
+openai
 python-dotenv
-tiktoken
+streamlit
+faiss-cpu
 pypdf
+tiktoken

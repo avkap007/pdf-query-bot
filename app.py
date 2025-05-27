@@ -34,31 +34,41 @@ def format_answer(text: str) -> str:
 if query:
     with st.spinner("Thinking..."):
         result = bot.ask(query)
-        top_docs = bot.get_top_docs(query)
-        st.session_state.doc_chunks = top_docs  # store for follow-ups
+        st.session_state.doc_chunks = result.get("top_docs", []) # store for follow-ups
 
-    st.success("🧠 Answer:")
-    st.markdown(format_answer(result["answer"]))
+    # Display the answer within the green box
+    st.success(f"🧠 Answer:\n\n{format_answer(result['answer'])}")
 
-    st.markdown("### 📄 Relevant Documents")
-    for i, doc in enumerate(top_docs):
-        meta = bot.format_metadata(doc.metadata)
-        with st.expander(f"Result {i+1} – {doc.metadata.get('source', 'Unknown')}"):
-            st.markdown(meta)
-            st.markdown("---")
-            st.write(doc.page_content[:500] + "...")
-            if st.button(f"Tell me more about Result {i+1}", key=f"more_{i}"):
-                followup = bot.ask(f"Tell me more about this decision:\n\n{doc.page_content}")
-                st.markdown(f"🧠 **Detailed Response:**\n\n{format_answer(followup['answer'])}")
+    if result.get("sources", "").startswith("metadata.json"):
+        st.info("This answer was retrieved directly from the metadata (not the LLM).")
 
-            # Follow-up input
-            followup_input = st.text_input(f"Ask follow-up about Result {i+1}", key=f"followup_input_{i}")
-            # if followup_input:
-            #     followup = bot.ask(f"{followup_input}\n\nContext:\n{doc.page_content}")
-            #     st.markdown(f"🧠 **Detailed Response:**\n\n{format_answer(followup['answer'])}")
-            if followup_input:
-                followup = bot.ask(f"{followup_input}\n\nContext:\n{doc.page_content}")
-                formatted_response = format_answer(followup["answer"])
+    # Display the most relevant document prominently
+    top_docs = result.get("top_docs", [])
+    if top_docs:
+        most_relevant_doc = top_docs[0]
+        st.markdown(f"### 📄 Most Relevant Document – Review Ref: {most_relevant_doc.metadata.get('review_ref', 'Unknown')}")
+        st.markdown(bot.format_metadata(most_relevant_doc.metadata))
+        st.markdown("---")
+
+        # Display remaining documents as secondary results
+        if len(top_docs) > 1:
+            st.markdown("### 📑 Other Relevant Documents")
+            for i, doc in enumerate(top_docs[1:]):
+                meta = bot.format_metadata(doc.metadata)
+                with st.expander(f"Result {i+2} – {doc.metadata.get('source', 'Unknown')}"):
+                    st.markdown(meta)
+                    st.markdown("---")
+                    st.write(doc.page_content[:200] + "...")
+
+        # Keep the follow-up logic associated with the most relevant doc for now
+        if top_docs:
+             # Follow-up input for the most relevant doc
+            st.markdown("---") # Separator before follow-up for clarity
+            followup_input_main = st.text_input(f"Ask follow-up about the Most Relevant Document (Review Ref: {most_relevant_doc.metadata.get('review_ref', 'Unknown')})", key="followup_input_main")
+            if followup_input_main:
+                # Use the new method to ask about the specific document
+                followup_answer = bot.ask_about_document(followup_input_main, most_relevant_doc.metadata.get('source', ''))
+                # formatted_response = format_answer(followup["answer"])
                 st.markdown("🧠 **Detailed Response:**")
-                st.markdown(f"```\n{formatted_response}\n```")
+                st.markdown(f"{followup_answer}") # Directly use the answer string
 
