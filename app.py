@@ -3,6 +3,10 @@ from dotenv import load_dotenv
 from utils import PSAQABot
 
 load_dotenv()
+
+import os
+print("KEY FOUND:", os.getenv("OPENAI_API_KEY")[:5])  # Print first few chars only
+
 bot = PSAQABot()
 
 st.title("📄 PS Assist – PDF Q&A")
