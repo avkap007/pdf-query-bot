@@ -2,11 +2,14 @@
 
 import os
 import json
+from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.schema import Document
+
+load_dotenv()
 
 PDF_FOLDER = "pdfs_2025"
 INDEX_FOLDER = "index_store"
@@ -18,7 +21,8 @@ with open(METADATA_FILE, "r") as f:
 
 # Setup
 all_chunks = []
-splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+# Increased chunk size and overlap for better context
+splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 
 for filename in os.listdir(PDF_FOLDER):
     if not filename.endswith(".pdf"):
