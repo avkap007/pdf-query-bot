@@ -1,13 +1,34 @@
+import os
+import httpx
 from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings
-from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 
 class PSAQABot:
-    def __init__(self, index_path="index_store", metadata_path="metadata.json", pdf_folder="pdfs_2025"):
-        embeddings = OpenAIEmbeddings()
+    def __init__(self, index_path="index_store"):
+        # --- Direct SSL Configuration ---
+        cert_path = os.path.join(os.getcwd(), "certs.pem")
+        
+        if not os.path.exists(cert_path):
+            raise FileNotFoundError(
+                "Certificate file not found at 'certs.pem'. "
+                "Please run ExportSelfSignedCertificate.ps1 first to generate it."
+            )
+
+        # Create a custom httpx client that uses the specified certificate bundle
+        custom_http_client = httpx.Client(verify=cert_path)
+        
+        # Force the OpenAI clients to use our custom http client
+        embeddings = OpenAIEmbeddings(http_client=custom_http_client)
+        llm = ChatOpenAI(
+            model="gpt-4", 
+            temperature=0.5, 
+            http_client=custom_http_client
+        )
+        # --- End of Direct SSL Configuration ---
+        
         self.vectorstore = FAISS.load_local(
             index_path,
             embeddings,
@@ -32,8 +53,6 @@ class PSAQABot:
             ]
         )
 
-        # Using a more powerful model and increasing temperature for more detailed answers
-        llm = ChatOpenAI(model="gpt-4", temperature=0.5)
         question_answer_chain = create_stuff_documents_chain(llm, prompt)
         self.chain = create_retrieval_chain(self.retriever, question_answer_chain)
 

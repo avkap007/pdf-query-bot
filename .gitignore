@@ -1,4 +1,13 @@
+# Environment
 .env
+.venv/
 venv/
+
+# Data and Caches
+index_store/
 __pycache__/
 *.pyc
+
+# Certificates
+certs.pem
+
